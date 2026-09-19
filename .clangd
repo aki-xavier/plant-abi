@@ -1,0 +1,14 @@
+# clangd configuration for the C ABI shim.
+#
+# The build (cabi/build_mj.sh, invoked by `make cabi-build`) fetches MuJoCo's
+# prebuilt framework into ~/.cache/simu/mj and compiles mj_shim.c with -F on it
+# so that <mujoco/mujoco.h> resolves. clangd does not see those flags, so
+# without this file every symbol from the MuJoCo headers reports as unknown in
+# the editor. Keep in sync with the Makefile's MJ ?= default.
+CompileFlags:
+  Add:
+    - -F/Users/aki/.cache/simu/mj
+    - -Icabi
+    - -I/Users/aki/.cache/simu/mj/mujoco.framework/Headers
+    - -xc
+    - -std=c11
