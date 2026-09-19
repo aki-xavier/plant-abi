@@ -1596,7 +1596,7 @@ int eng_robot_set_state(void* robot, const float* q, const float* v) {
     d->qpos[r->qpos_adr[j]] = (mjtNum)q[qo + j];
   }
   // NO forward pass between the position and velocity writes: the omegas below read the base quaternion
-  // straight out of qpos, and the final mj_forward is the state the caller reads back (see docs/PERF_AUDIT.md).
+  // straight out of qpos, and the final mj_forward is the state the caller reads back.
   if (v != NULL) {
     if (r->base_dofs == 6) {
       const int bd = r->base_dof_adr;
