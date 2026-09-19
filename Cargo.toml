@@ -1,6 +1,6 @@
 # plant-abi — the physics engine's C ABI, as a project of its own.
 #
-#   make -C ../simu cabi-build    # writes the shim this crate links against, before anything builds
+#   make cabi-build               # writes the shim this crate links against, before anything builds
 #   cargo check                   # no external dependencies at all: std, plus the C shim
 #
 # `links` states what this package is: the one package in any graph that owns the `eng_shim` native

@@ -39,7 +39,7 @@ crate is the boundary between those two facts.
 ## Building
 
 ```sh
-make -C ../simu cabi-build    # writes ~/.cache/simu/mj_build/bin/libeng_shim.dylib
+make cabi-build               # writes ~/.cache/simu/mj_build/bin/libeng_shim.dylib
 cargo test                    # the four charter claims
 ```
 
