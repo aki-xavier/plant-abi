@@ -1,6 +1,6 @@
-// mj_model_load.c — loads every model this project has through the shim and checks the DOF count the
-// V-side tests assert (an expectation from the models, not from this backend), which is the mesh
-// path's test: MuJoCo reads binary STL only while the G1 ships ASCII meshes.
+// mj_model_load.c — loads every model it is pointed at through the shim and checks the DOF count the
+// model itself declares (an expectation from the models, not from this backend), which is the mesh
+// path's test: MuJoCo reads binary STL only, so an ASCII mesh in a model is where this breaks.
 //
 // The models are ../control-model's, not this crate's, so the models DIRECTORY is an argument
 // (default "."): this crate holds the ABI, and a self-check that hardcoded a neighbour's relative
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     const char* urdf;
     const char* ee;
     int floating;
-    int want;  // the DOF count the V-side test for this model asserts
+    int want;  // the DOF count this model declares
   } models[] = {
       {"z1 arm (fixed)", z1_urdf, "link06", 0, 6},
       {"unitree G1 (floating)", g1_urdf, "left_ankle_roll_link", 1, 35},

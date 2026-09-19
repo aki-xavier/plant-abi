@@ -1,4 +1,4 @@
-// mj_shim.c — the eng_* C ABI implemented on MuJoCo's C API; the V side binds these names and never
+// mj_shim.c — the eng_* C ABI implemented on MuJoCo's C API; the caller binds these names and never
 // learns which engine is behind them (layering rule: "the C world's only entry is eng_shim.h's C ABI
 // face"). A scene IS its single robot's spec plus the scene's static geoms: the spec comes from the first
 // attach, earlier statics are applied then, later ones are spliced in and the model recompiled.
@@ -15,7 +15,8 @@
 
 #include <mujoco/mujoco.h>
 
-// the contract this file implements: including it checks every definition below against the V side's bindings
+// the contract this file implements: including it checks every definition below against the header's own
+// prototypes
 #include "eng_shim.h"
 
 // mj_debug_enabled answers SD_MJ_DEBUG once per process (its reads sit in per-contact loops and getenv
@@ -83,7 +84,7 @@ struct MjRobot {
   int nv;
   int* qpos_adr;  // [n_joints] into d->qpos
   int* dof_adr;   // [n_joints] into d->qvel / qfrc_applied
-  // slot_of_body[node] is the model body id of V-side tree node `node` (0 = root); mj_resolve has the two orders.
+  // slot_of_body[node] is the model body id of caller-side tree node `node` (0 = root); mj_resolve has the two orders.
   int* slot_of_body;
   int n_links;
   int ee_body;  // model body id of the end-effector link, -1 if unknown
@@ -91,7 +92,7 @@ struct MjRobot {
   int base_dofs;
   int base_qpos_adr;
   int base_dof_adr;
-  // The contact REPORT's mode and stiffness: stated by eng_robot_set_contact_report, otherwise asked of the environment (tests/g1_attach.rs relies on it).
+  // The contact REPORT's mode and stiffness: stated by eng_robot_set_contact_report, otherwise asked of the environment (the default a caller that never states one keeps).
   int report_set;
   int report_penalty;
   double report_stiffness;
@@ -410,12 +411,12 @@ static int mj_name_cmp(mjModel* m, int a, int b) {
   return c < 0 ? -1 : (c > 0 ? 1 : 0);
 }
 
-// mj_resolve builds the slot mapping between this ABI and MuJoCo's own order: the V-side tree (and so its
+// mj_resolve builds the slot mapping between this ABI and MuJoCo's own order: the caller-side tree (and so its
 // q, tau and contact-slot indices) is a DFS pre-order with each body's children sorted by link name, while
 // MuJoCo's bodies follow the model document's order, so every index that crosses is translated here. The
 // node list is not per body: the root takes one node and then ONE NODE PER JOINT (the z1's six joints sit
 // on five bodies), which makes the mapping independent of the engine's layout. slot_of_body[node] is the
-// body id behind node `node` (0 = root); qpos_adr/dof_adr hold the joints in V-side order.
+// body id behind node `node` (0 = root); qpos_adr/dof_adr hold the joints in caller-side order.
 static int mj_resolve(MjScene* s, MjRobot* r, const char* root_link) {
   mjModel* m = s->model;
   // the robot's root: the body directly under the world
@@ -478,7 +479,7 @@ static int mj_resolve(MjScene* s, MjRobot* r, const char* root_link) {
     for (int j = 0; j < (int)m->body_jntnum[b] && node <= r->n_joints; ++j) {
       int jid = (int)m->body_jntadr[b] + j;
       if (m->jnt_type[jid] == mjJNT_FREE) {
-        continue;  // the base's own joint is not a V-side node
+        continue;  // the base's own joint is not a caller-side node
       }
       r->qpos_adr[node - 1] = (int)m->jnt_qposadr[jid];
       r->dof_adr[node - 1] = (int)m->jnt_dofadr[jid];
@@ -896,9 +897,9 @@ static int mj_prepare_one_mesh(const char* src, char* dst, size_t cap) {
   return 0;
 }
 
-// mj_drop_unusable_blocks removes <collision>/<visual> blocks whose geometry MuJoCo cannot use (the duck's
-// URDF references meshes committed empty, the G1's has collision elements with no <geometry>) and reports
-// each one: a dropped block loses that geometry, never gains a wrong one, and the loss is never silent.
+// mj_drop_unusable_blocks removes <collision>/<visual> blocks whose geometry MuJoCo cannot use (a URDF
+// may reference meshes committed empty, or carry collision elements with no <geometry>) and reports each
+// one: a dropped block loses that geometry, never gains a wrong one, and the loss is never silent.
 static int mj_drop_unusable_blocks(const char* text, const char* model_dir, char** out) {
   size_t cap = strlen(text) + 1;
   char* buf = (char*)malloc(cap);
@@ -1299,7 +1300,7 @@ static int mj_attach_impl(void* scene, const char* urdf, const char* ee, int flo
   r->pen_w = (double*)calloc((size_t)(s->model->nbody > 0 ? s->model->nbody : 1) * 3, sizeof(double));
   r->pen_wsum = (double*)calloc((size_t)(s->model->nbody > 0 ? s->model->nbody : 1), sizeof(double));
   {
-    // the readout is sized by the V-side slot count, which mj_resolve fixes
+    // the readout is sized by the caller-side slot count, which mj_resolve fixes
     size_t slots = (size_t)(s->model->njnt + 1);
     r->fc_filt = (float*)calloc(slots * 3, sizeof(float));
     r->fw_filt = (float*)calloc(slots * 6, sizeof(float));
@@ -1758,7 +1759,7 @@ int eng_robot_step(void* robot, const float* tau, int n_sub, double dt) {
 // resting contact): mj_contactForce returns the 6D force:torque in the CONTACT frame, whose first axis
 // is the normal from geom[0] to geom[1] and whose force acts on the body owning geom[1]; the moment is
 // about each body's own ORIGIN (cop_x = ty/fz there), and the entries are in MUJOCO's body order while
-// the V-side tree is not — the counts agree, the order does not.
+// the caller-side tree is not — the counts agree, the order does not.
 // mj_penalty_report selects the reading: the default is the solver's own force, the load a steady contact
 // carries; MJ_CONTACT_REPORT=penalty gives k times the overlap the caller's pose creates, which
 // reproduces the replaced engine's penalty contact but under-reports a held load (25 N reads 0.65 N).
@@ -1796,7 +1797,7 @@ static double mj_filter_alpha(const MjRobot* r) {
 }
 
 // mj_slot_of_body answers which slot a MuJoCo body's contacts report into: a body with a node of the
-// V-side tree reports into that node's slot (slot s holds node s+1, the last slot the root), and a body
+// caller-side tree reports into that node's slot (slot s holds node s+1, the last slot the root), and a body
 // with none — attached by a fixed joint, such as a fingertip pad — into the nearest jointed ancestor's slot.
 static int mj_slot_of_body(const MjRobot* r, const mjModel* m, int b) {
   int n = r->n_links;
@@ -1824,7 +1825,7 @@ static int mj_contact_tables(MjRobot* r, float* forces3, float* wrenches6, int n
       wrenches6[i] = 0.0f;
     }
   }
-  // accumulated per MuJoCo body first and translated into V-side slots at the end (the orders differ)
+  // accumulated per MuJoCo body first and translated into caller-side slots at the end (the orders differ)
   int nbody = (int)m->nbody;
   float* fw_all = (float*)calloc((size_t)nbody * 3, sizeof(float));
   float* tw_all = wrenches6 != NULL ? (float*)calloc((size_t)nbody * 6, sizeof(float)) : NULL;
@@ -2015,7 +2016,7 @@ static int mj_contact_tables(MjRobot* r, float* forces3, float* wrenches6, int n
       }
     }
   }
-  // the V side's layout: slot s holds node s+1, the LAST slot the root; a body's contacts land in its own
+  // the caller-side layout: slot s holds node s+1, the LAST slot the root; a body's contacts land in its own
   // slot or, for a body that is not a node, in the slot of the link that carries it.
   for (int b = 1; b < nbody; ++b) {
     int s = mj_slot_of_body(r, m, b);
@@ -2051,7 +2052,7 @@ static int mj_contact_tables(MjRobot* r, float* forces3, float* wrenches6, int n
     }
   }
   if (mj_debug_enabled() && forces3 != NULL) {
-    // slot-indexed: the values are per V-side slot, so naming them with a MuJoCo body id would mislabel every row
+    // slot-indexed: the values are per caller-side slot, so naming them with a MuJoCo body id would mislabel every row
     for (int s = 0; s < n; ++s) {
       int node = (s == n - 1) ? 0 : s + 1;
       int src = r->slot_of_body[node];
@@ -2121,7 +2122,7 @@ int eng_robot_contact_torque(void* robot, float* out) {
 }
 
 // ------------------------------------------------------- not yet ported ----
-// Part of the contract the V side binds: these fail loudly instead of returning a plausible zero.
+// Part of the contract the caller binds: these fail loudly instead of returning a plausible zero.
 
 // Zero Coulomb/stiction friction, keep the URDF viscous damping (MuJoCo reads friction off the geoms).
 int eng_robot_keep_viscous_only(void* robot) {

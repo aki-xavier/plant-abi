@@ -241,6 +241,6 @@ unsafe fn cstr_message(p: *const std::os::raw::c_char) -> String {
 // the handles above. What is stated HERE is the engine's own side — the handles, and the C ABI they
 // wrap (ffi.rs) — which is this crate's whole job.
 //
-// The plants that USE these handles are their products', not this crate's: simu's CEnginePlant drives
-// an arm, its BipedPlant mirrors a walking machine, and this crate learns about neither. Anything
-// above the ABI that more than one of them needs belongs in ../control-base, where the contract lives.
+// The plants that USE these handles are not this crate's to know: they live wherever they live,
+// there may be any number of them, and each drives these handles on its own. Anything above the ABI
+// that more than one of them needs belongs in ../control-base, where the contract lives.

@@ -2,11 +2,11 @@
 // depending on `plant-abi` means taking the engine, and `make cabi-build` is a prerequisite of every
 // target that does — run it first.
 //
-// SIMU_ENGINE_DIR (default ~/.cache/simu/mj_build/bin) mirrors simu's Makefile BUILD ?=, SIMU_MJ_DIR
-// (default ~/.cache/simu/mj) its MJ ?=. The names and the cache path are kept rather than renamed: they
-// are a build ritual a working tree already has, not this crate's vocabulary, and re-spelling them
-// would invalidate every existing shim. The shim carries the rpath to MuJoCo's own framework; the two
-// rpaths below are the ones this crate must add for its consumers' binaries.
+// SIMU_ENGINE_DIR (default ~/.cache/simu/mj_build/bin) and SIMU_MJ_DIR (default ~/.cache/simu/mj) are
+// the names of the build ritual this crate inherited. The names and the cache path are kept rather than
+// renamed: they are a ritual a working tree already has, not this crate's vocabulary, and re-spelling
+// them would invalidate every existing shim. The shim carries the rpath to MuJoCo's own framework; the
+// two rpaths below are the ones this crate must add for its consumers' binaries.
 
 use std::env;
 use std::path::Path;

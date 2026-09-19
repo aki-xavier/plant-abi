@@ -1,5 +1,6 @@
-// eng_shim.h — minimal C ABI between the V control core and the physics engine: the model, the state
-// layout and the contact readout are the whole contract. cabi/mj_shim.c implements it on MuJoCo's C API.
+// eng_shim.h — minimal C ABI between the Rust control core and the physics engine: the model, the state
+// layout and the contact readout are the whole contract. This header names no engine: cabi/mj_shim.c is
+// one implementation of it, and another engine's would implement these same names.
 // Functions returning int yield 0 on success and -1 on failure; after a -1, eng_robot_last_error()
 // describes the cause (also mirrored to stderr).
 
@@ -19,7 +20,7 @@ void eng_scene_free(void* ctx, void* scene);
 int eng_robot_attach(void* scene, const char* urdf_path, const char* ee_link, void** out_robot, char* err, int err_cap);
 
 // As eng_robot_attach, but the world joint stays Free: the base owns 6 DOFs ([x y z rotvec] leading every
-// pose/velocity/force vector); for the duck and the G1.
+// pose/velocity/force vector).
 int eng_robot_attach_floating(void* scene, const char* urdf_path, const char* ee_link, void** out_robot, char* err, int err_cap);
 
 // Explicit-parameter variant: weld_root 0 = floating base; voxel_meters is the replaced engine's SDF voxel size, ignored here (meshes collide directly), pass 0.
@@ -31,7 +32,7 @@ int eng_scene_add_box(void* scene, const char* shape_path, float px, float py, f
 // Adds an infinite static ground plane (normal . x = distance) as an analytic collider — the ground for legged robots.
 int eng_scene_add_plane(void* scene, float nx, float ny, float nz, float distance);
 
-// ---- rendering (MuJoCo's own renderer) --------------------------------------
+// ---- rendering (an offscreen frame) -----------------------------------------
 
 // Draws one frame and fills rgb with packed RGB8 (width*height*3, top row first); a null lookat follows the robot's CoM, azimuth/elevation in degrees, distance in metres (<= 0 takes the extent).
 int eng_scene_render(void* scene, int width, int height, const float* lookat, float distance,
@@ -42,7 +43,7 @@ const char* eng_scene_render_error(void* scene);
 // Retunes link-against-static contact: penalty stiffness [Pa/m], normal viscous damping, Coulomb friction (0 leaves a field untouched).
 int eng_robot_set_contact_params(void* robot, double penalty, double damping, double coulomb);
 
-// States the contact REPORT the caller wants: 1 = the penalty report at `stiffness` N/m, 0 = the solver's own per-contact table; before any call the shim asks the environment (MJ_CONTACT_REPORT / MJ_CONTACT_STIFFNESS).
+// States the contact REPORT the caller wants: 1 = the penalty report at `stiffness` N/m, 0 = the solver's own per-contact table. Before any call, an implementation-defined default applies — an implementation may take it from its environment, and naming it is the implementation's business; stating the pair here overrides it for this robot.
 int eng_robot_set_contact_report(void* robot, int penalty, double stiffness);
 
 // Aggregate contact force and torque over the robot's own bodies, world frame (N, N.m), as the solver applied them — NOT the per-link tables' reconstruction.

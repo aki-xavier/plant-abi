@@ -17,8 +17,10 @@ MODELS ?= ../control-model/models
 cabi-build:
 	cabi/build_mj.sh $(MJ) $(BUILD)
 
-# The ABI checks that need no Rust: mj_shim_smoke drives the eng_* calls the plants do; mj_model_load
-# loads every model the two products have and checks the DOF count their own tests assert.
+# The ABI checks that need no Rust: mj_shim_smoke drives every eng_* entry point the header declares —
+# including the six nothing else did (attach_ex, add_box, set_contact_params, set_contact_report,
+# keep_viscous_only, last_error); mj_model_load loads the models it is pointed at and checks the DOF
+# count each one declares.
 cabi-check: cabi-build
 	cc -O2 -Icabi -F$(MJ) -L$(BUILD)/bin -o $(BUILD)/mj_shim_smoke cabi/mj_shim_smoke.c \
 	   -framework mujoco -leng_shim -Wl,-rpath,$(MJ) -Wl,-rpath,$(BUILD)/bin
