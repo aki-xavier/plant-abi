@@ -1,0 +1,19 @@
+# plant-abi — the physics engine's C ABI, as a project of its own.
+#
+#   make -C ../simu cabi-build    # writes the shim this crate links against, before anything builds
+#   cargo check                   # no external dependencies at all: std, plus the C shim
+#
+# `links` states what this package is: the one package in any graph that owns the `eng_shim` native
+# library. Two of them would be two ABIs.
+
+[package]
+name = "plant-abi"
+description = "The physics engine's C ABI as a project of its own: the eng_shim C source, the eng_* Rust declarations, and the Engine/Scene/Robot handles they hand out."
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.87"
+license = "MIT"
+links = "eng_shim"
+
+# No dependencies, Rust or native: the module list above is the whole crate.
+[dependencies]
