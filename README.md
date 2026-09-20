@@ -48,7 +48,7 @@ The shim's location and the `SIMU_ENGINE_DIR` / `SIMU_MJ_DIR` names are kept as
 they were rather than renamed — they are a build ritual a working tree already
 has, not this crate's vocabulary.
 
-The checks are the C self-checks rather than `cargo test`, and they are about
+The checks are the C self-checks rather than `mbx test`, and they are about
 what the ABI does: `mj_model_load` pins the DOF count of every model, and
 `mj_shim_smoke` drives every `eng_*` entry point the header declares — context,
 scene, ground, wall, attach (both attach paths), state, step, the per-link
