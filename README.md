@@ -40,6 +40,7 @@ crate is the boundary between those two facts.
 ```sh
 make cabi-build               # writes ~/.cache/simu/mj_build/bin/libeng_shim.dylib
 make cabi-check               # the two C self-checks, against ../control-model/models
+make test                     # the same, then the comment gate and the comment rules
 ```
 
 `cabi-build` first, for every target: this crate IS the ABI, so there is no
@@ -48,8 +49,16 @@ The shim's location and the `SIMU_ENGINE_DIR` / `SIMU_MJ_DIR` names are kept as
 they were rather than renamed — they are a build ritual a working tree already
 has, not this crate's vocabulary.
 
-The checks are the C self-checks rather than `mbx test`, and they are about
-what the ABI does: `mj_model_load` pins the DOF count of every model, and
+The checks are the C self-checks rather than `mbx test` — with one exception, the comment rules, which
+are about this crate's prose and not its ABI: `make test` runs the C self-checks and then `mbx test`,
+which here is the gate in `tests/comment_why.rs`, and finally the same rules over the tree. The rules
+are `../comment-why`, a sibling project that reads text and asks the compiler for nothing; they are a
+DEV-dependency, so they add no library and no ABI to the ones this package owns. They decide three
+shapes: process narration and filler, a comment line whose content words are all in the code below it,
+and a short doc comment that re-says the item's own name. The rest is a reader's call, and
+`make comments` prints that crate's local approximation as advice it never fails on.
+
+The C self-checks are about what the ABI does: `mj_model_load` pins the DOF count of every model, and
 `mj_shim_smoke` drives every `eng_*` entry point the header declares — context,
 scene, ground, wall, attach (both attach paths), state, step, the per-link
 contact tables, the report mode a caller states, the policy writers, the render,

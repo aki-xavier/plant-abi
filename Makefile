@@ -3,6 +3,8 @@
 #   make cabi-build   # build libeng_shim.dylib on MuJoCo's C API (prerequisite of every target
 #                     # that steps a plant; build.rs fails without it)
 #   make cabi-check   # the ABI checks that need no Rust
+#   make test         # the C self-checks, then the comment gate and the comment rules
+#   make comments     # the comment rules alone, with the local approximation for the rest
 #
 # Requires: clang >= 15, python3 + unzip (cabi/build_mj.sh fetches MuJoCo's prebuilt library on the
 # first run). MJ and BUILD are the same cache a consumer's build.rs reads; MODELS is control-model's
@@ -12,7 +14,9 @@ MJ     ?= $(HOME)/.cache/simu/mj
 BUILD  ?= $(HOME)/.cache/simu/mj_build
 MODELS ?= ../control-model/models
 
-.PHONY: cabi-build cabi-check
+COMMENT_WHY ?= ../comment-why
+
+.PHONY: cabi-build cabi-check test comments
 
 cabi-build:
 	cabi/build_mj.sh $(MJ) $(BUILD)
@@ -28,3 +32,13 @@ cabi-check: cabi-build
 	cc -O2 -Icabi -F$(MJ) -L$(BUILD)/bin -o $(BUILD)/mj_model_load cabi/mj_model_load.c \
 	   -framework mujoco -leng_shim -Wl,-rpath,$(MJ) -Wl,-rpath,$(BUILD)/bin
 	$(BUILD)/mj_model_load $(MODELS)
+
+# The C self-checks are the ABI's, and `mbx test` is the one Rust test this crate has: the comment gate
+# in tests/comment_why.rs. The rules read text and are a DEV-dependency, so neither the library this
+# package links nor the shim it owns is touched by them.
+test: cabi-check
+	mbx test
+	$(MAKE) comments
+
+comments:
+	mbx run --quiet --manifest-path $(COMMENT_WHY)/Cargo.toml --bin comment-why -- --review

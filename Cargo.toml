@@ -15,5 +15,10 @@ rust-version = "1.87"
 license = "MIT"
 links = "eng_shim"
 
-# No dependencies, Rust or native: the module list above is the whole crate.
+# No runtime dependency, Rust or native: the module list above is the whole crate. `comment-why` is a
+# DEV-dependency only — the comment rules the prose here is held to (tests/comment_why.rs) — and it
+# reads text, so it adds no library and no ABI to the ones this package owns.
 [dependencies]
+
+[dev-dependencies]
+comment-why = { path = "../comment-why" }
