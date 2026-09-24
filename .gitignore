@@ -2,3 +2,6 @@
 
 # macOS
 .DS_Store
+
+# CodeGraph index
+.codegraph/
